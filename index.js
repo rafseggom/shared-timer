@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const app = require('express')();
 const http = require('http').createServer(app);
 const { Server } = require('socket.io');
@@ -10,6 +12,53 @@ const io = new Server(http, {
 const port  = process.env.PORT || 5000;
 const masterKey  = process.env.MASTERKEY || "supersecret";
 var sessionKey  = "";
+var activeProfessor = null; // Track currently active professor
+
+// Parse professor passwords from environment variable
+function parseProfessors() {
+  const profPasswordsEnv = process.env.PROF_PASSWORDS || "";
+  if (!profPasswordsEnv) return [];
+  
+  return profPasswordsEnv.split(',').map(entry => {
+    const [username, password, fullName] = entry.split(':');
+    return { username: username?.trim(), password: password?.trim(), fullName: fullName?.trim() };
+  }).filter(p => p.username && p.password && p.fullName);
+}
+
+const professors = parseProfessors();
+
+// Middleware to parse JSON bodies
+app.use(require('express').json());
+
+// Helper function to check if password belongs to a professor
+function getProfessorByPassword(password) {
+    if (!password) return null;
+    return professors.find(p => p.password === password);
+}
+
+// Helper function to check authorization (professor password > masterKey > sessionKey)
+function isAuthorized(key, professorPassword) {
+    // Priority 1: Professor password
+    if (professorPassword && getProfessorByPassword(professorPassword)) {
+        return true;
+    }
+    
+    // If there's an active professor, block non-professor actions
+    if (activeProfessor && !professorPassword) {
+        console.log("Action blocked: Active professor session exists");
+        return false;
+    }
+    
+    // Priority 2: Master key
+    if (key === masterKey) {
+        return true;
+    }
+    // Priority 3: Session key
+    if (key === sessionKey) {
+        return true;
+    }
+    return false;
+}
 
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
@@ -21,6 +70,27 @@ app.get('/piecon.js', (req, res) => {
     res.sendFile(__dirname + '/piecon.min.js');
 });
 
+// API endpoint to verify professor password
+app.post('/api/professor/verify', (req, res) => {
+    const { password } = req.body;
+    
+    if (!password) {
+        return res.json({ valid: false });
+    }
+    
+    const professor = professors.find(p => p.password === password);
+    
+    if (professor) {
+        console.log("Professor login: <" + professor.fullName + ">");
+        return res.json({ 
+            valid: true, 
+            username: professor.username,
+            fullName: professor.fullName 
+        });
+    }
+    
+    return res.json({ valid: false });
+});
 
 console.log("MasterKey: <"+masterKey+">");
 console.log("SessionKey: <"+sessionKey+">");
@@ -53,6 +123,14 @@ io.on('connection', (socket) => {
         
     socket.on('disconnect', () => {
         console.log("User desconnected. Current Number: "+socket.client.conn.server.clientsCount);
+        
+        // If the disconnected socket was a professor, clear the session
+        if (activeProfessor && activeProfessor.socketId === socket.id) {
+            console.log("Professor session ended (disconnected): <" + activeProfessor.fullName + ">");
+            activeProfessor = null;
+            io.sockets.emit("professorDisconnected");
+        }
+        
         if(socket.client.conn.server.clientsCount == 0){
             targetTime = null;
             console.log("Timer reset - all users disconnected")
@@ -71,16 +149,18 @@ io.on('connection', (socket) => {
             return;
         }
         
-        console.log("Session Key Change Request: <"+ sessionKey+ "> -> <"+msg.newKey + "> with key <"+msg.key+">");
+        console.log("Session Key Change Request: <"+ sessionKey+ "> -> <"+msg.newKey + "> with key <"+msg.key+"> or professor password");
 
-        if(msg.newKey == sessionKey || msg.key == sessionKey || sessionKey == "") {
+        const professor = getProfessorByPassword(msg.professorPassword);
+        
+        if(msg.newKey == sessionKey || msg.key == sessionKey || sessionKey == "" || professor) {
             sessionKey = msg.newKey;
             if (sessionKey != "")
                 io.sockets.emit("keyChanged", {
                     successToken : msg.successToken
                 });
             else
-                io.sockets.emit("keyCleared",);
+                io.sockets.emit("keyCleared");
 
         } else {
             
@@ -94,15 +174,24 @@ io.on('connection', (socket) => {
 
     socket.on('reset', (msg) => {
         const oldRemaining = getTimeRemaining();
-        console.log("Reset Request: "+oldRemaining+ "-> "+msg.data + " with key <"+msg.key+">");
+        const professor = getProfessorByPassword(msg.professorPassword);
+        console.log("Reset Request: "+oldRemaining+ "-> "+msg.data + " with key <"+msg.key+">" + (professor ? " by professor <" + professor.fullName + ">" : ""));
 
-        if(msg.key == masterKey || msg.key == sessionKey) {
+        if(isAuthorized(msg.key, msg.professorPassword)) {
             targetTime = Date.now() + (msg.data * 1000);
             io.sockets.emit("reset", {
                 data: msg.data,
                 targetTime: targetTime,
                 timeRemaining: msg.data
             });
+            
+            // Emit professor info to all clients if action was by professor
+            if (professor) {
+                io.sockets.emit("currentProfessor", {
+                    fullName: professor.fullName,
+                    username: professor.username
+                });
+            }
         } else {
             console.log("Dennied!");
         }
@@ -110,9 +199,10 @@ io.on('connection', (socket) => {
 
     socket.on('addTime', (msg) => {
         const oldRemaining = getTimeRemaining();
-        console.log("AddTime Request: +"+msg.data + " with key <"+msg.key+">");
+        const professor = getProfessorByPassword(msg.professorPassword);
+        console.log("AddTime Request: +"+msg.data + " with key <"+msg.key+">" + (professor ? " by professor <" + professor.fullName + ">" : ""));
 
-        if(msg.key == masterKey || msg.key == sessionKey) {
+        if(isAuthorized(msg.key, msg.professorPassword)) {
             if (targetTime && targetTime > Date.now()) {
                 targetTime += (msg.data * 1000);
             } else {
@@ -124,6 +214,14 @@ io.on('connection', (socket) => {
                 targetTime: targetTime,
                 timeRemaining: newRemaining
             });
+            
+            // Emit professor info to all clients if action was by professor
+            if (professor) {
+                io.sockets.emit("currentProfessor", {
+                    fullName: professor.fullName,
+                    username: professor.username
+                });
+            }
         } else {
             console.log("Dennied!");
         }
@@ -136,6 +234,43 @@ io.on('connection', (socket) => {
             targetTime: targetTime,
             timeRemaining: remaining
         });
+        
+        // If there's an active professor, notify the newly connected client
+        if (activeProfessor) {
+            socket.emit("currentProfessor", {
+                fullName: activeProfessor.fullName,
+                username: activeProfessor.username
+            });
+        }
+    });
+    
+    // Professor session management
+    socket.on('professorConnected', (data) => {
+        const professor = getProfessorByPassword(data.password);
+        if (professor) {
+            activeProfessor = {
+                fullName: professor.fullName,
+                username: professor.username,
+                socketId: socket.id
+            };
+            console.log("Professor session started: <" + professor.fullName + ">");
+            
+            // Broadcast to ALL clients
+            io.sockets.emit("currentProfessor", {
+                fullName: professor.fullName,
+                username: professor.username
+            });
+        }
+    });
+    
+    socket.on('professorDisconnected', () => {
+        if (activeProfessor && activeProfessor.socketId === socket.id) {
+            console.log("Professor session ended: <" + activeProfessor.fullName + ">");
+            activeProfessor = null;
+            
+            // Broadcast to ALL clients
+            io.sockets.emit("professorDisconnected");
+        }
     });
 });
 
