@@ -1,26 +1,41 @@
+<!DOCTYPE html>
 <html>
     <head>
         <meta name="mobile-web-app-capable" content="yes">
         <script src="/socket.io/socket.io.js"></script>
         <script src="/piecon.js"></script>
         <script>
-                
+            
+            // Admin password check
+            var adminMode = (window.location.pathname == "/admin");
+            if (adminMode) {
+                var pwd = prompt("Enter admin password:");
+                if (pwd !== "admin123") {
+                    alert("Incorrect password!");
+                    window.location.href = "/";
+                }
+            }
+            
             var socket = io();
             var t = 15;
             var i = t;
             var key = "";
             var successToken = "";
+            var targetTime = null;  // Timestamp-based timer
 
             socket.emit("sync");
             
             Piecon.setOptions({color: '#999999'});
 
-            var adminMode = (window.location.pathname == "/admin");
-
             setInterval(function () {
                 
                 timerDiv = document.getElementById("timer");
-                t--;
+                
+                // Calculate time from targetTime timestamp instead of decrementing
+                if (targetTime) {
+                    t = Math.max(0, Math.ceil((targetTime - Date.now()) / 1000));
+                }
+                
                 var minutes = Math.floor(Math.abs(t)/60);
                 var seconds = Math.round((Math.abs(t) - minutes*60));
 
@@ -91,16 +106,36 @@
                     console.log('Reset ' + msg.data);
                     t = msg.data;
                     i = t;
+                    // Store targetTime for timestamp-based calculation
+                    if (msg.targetTime) {
+                        targetTime = msg.targetTime;
+                    } else {
+                        // Fallback: calculate targetTime from data if server doesn't send it
+                        targetTime = Date.now() + (msg.data * 1000);
+                    }
+            });
+
+            // Periodic sync-check for auto-correction
+            socket.on('sync-check', (msg) => {
+                if (msg.targetTime) {
+                    // Only update if drift is significant (> 2 seconds)
+                    const currentCalc = Math.max(0, Math.ceil((targetTime - Date.now()) / 1000));
+                    const serverTime = msg.timeRemaining;
+                    if (Math.abs(currentCalc - serverTime) > 2) {
+                        console.log('Sync correction: ' + currentCalc + ' -> ' + serverTime);
+                        targetTime = msg.targetTime;
+                        t = serverTime;
+                    }
+                }
             });
 
 
             function plus(extra){
                 
-                var tReset = t+(extra);
-                console.log("tReset: "+tReset);
-                socket.emit("reset", {
+                console.log("Adding time: +"+extra+" seconds");
+                socket.emit("addTime", {
                     key: key,
-                    data: tReset
+                    data: extra
                 });
 
             }
@@ -278,8 +313,8 @@
         }
         document.getElementById("keyPanel").style.display = "none";
     </script>
-<span style="font-size: x-small; text-align: center;  color:#aaa; position:fixed; width:100%; height: 2rem; left: 0; bottom: 0;">
-    Made with 🧡 from <a href="https://en.wikipedia.org/wiki/Seville">☀️</a> by <a href="https://github.com/pafmon/shared-timer">@pafmon</a>
+<span style="font-size: x-small; text-align: center; color:#aaa; position:fixed; width:100%; height: 2rem; left: 0; bottom: 0;">
+    Made with 🧡 by <a href="https://github.com/rafseggom">@rafseggom</a> | Fork from <a href="https://github.com/pafmon/shared-timer">@pafmon</a>
 </span>
     
 </html>

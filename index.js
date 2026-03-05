@@ -1,6 +1,12 @@
 const app = require('express')();
 const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+const { Server } = require('socket.io');
+const io = new Server(http, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 const port  = process.env.PORT || 5000;
 const masterKey  = process.env.MASTERKEY || "supersecret";
 var sessionKey  = "";
@@ -23,27 +29,33 @@ http.listen(port, () => {
   console.log("Server ready on port " +  port);
 });
 
-var t=60;
+// Timestamp-based timer (null when no timer is active)
+var targetTime = null;
 
-var ticker = false; 
+// Helper function to calculate time remaining
+function getTimeRemaining() {
+  if (!targetTime) return 0;
+  return Math.max(0, Math.ceil((targetTime - Date.now()) / 1000));
+}
+
+// Periodic sync-check broadcast (every 15 seconds)
+setInterval(() => {
+  if (targetTime && targetTime > Date.now()) {
+    io.sockets.emit('sync-check', {
+      targetTime: targetTime,
+      timeRemaining: getTimeRemaining()
+    });
+  }
+}, 15000);
 
 io.on('connection', (socket) => {
     console.log("New User Connected. Current Number: "+socket.client.conn.server.clientsCount);
-
-    if(ticker == false)
-        ticker = setInterval(function () {
-            t--;
-            console.log(t);
-            
-        },1000);
         
     socket.on('disconnect', () => {
         console.log("User desconnected. Current Number: "+socket.client.conn.server.clientsCount);
         if(socket.client.conn.server.clientsCount == 0){
-            t=60;
-            console.log("Ticker stop!")
-            clearInterval(ticker); 
-            ticker = false;
+            targetTime = null;
+            console.log("Timer reset - all users disconnected")
             sessionKey = "";
         }
     });
@@ -81,22 +93,48 @@ io.on('connection', (socket) => {
     });
 
     socket.on('reset', (msg) => {
-
-        console.log("Reset Request: "+t+ "-> "+msg.data + " with key <"+msg.key+">");
+        const oldRemaining = getTimeRemaining();
+        console.log("Reset Request: "+oldRemaining+ "-> "+msg.data + " with key <"+msg.key+">");
 
         if(msg.key == masterKey || msg.key == sessionKey) {
-            t = msg.data;
-            io.sockets.emit("reset", msg);
+            targetTime = Date.now() + (msg.data * 1000);
+            io.sockets.emit("reset", {
+                data: msg.data,
+                targetTime: targetTime,
+                timeRemaining: msg.data
+            });
         } else {
             console.log("Dennied!");
         }
-            
+    });
 
+    socket.on('addTime', (msg) => {
+        const oldRemaining = getTimeRemaining();
+        console.log("AddTime Request: +"+msg.data + " with key <"+msg.key+">");
+
+        if(msg.key == masterKey || msg.key == sessionKey) {
+            if (targetTime && targetTime > Date.now()) {
+                targetTime += (msg.data * 1000);
+            } else {
+                targetTime = Date.now() + (msg.data * 1000);
+            }
+            const newRemaining = getTimeRemaining();
+            io.sockets.emit("reset", {
+                data: newRemaining,
+                targetTime: targetTime,
+                timeRemaining: newRemaining
+            });
+        } else {
+            console.log("Dennied!");
+        }
     });
     
     socket.on('sync', () => {
+        const remaining = getTimeRemaining();
         io.sockets.emit("reset", {
-            data: t,
+            data: remaining,
+            targetTime: targetTime,
+            timeRemaining: remaining
         });
     });
 });
