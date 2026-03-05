@@ -246,79 +246,85 @@
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">    
         <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
         <style>
+            body {
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+            }
             .admin-card {
                 background: rgba(255, 255, 255, 0.95);
-                border-radius: 15px;
-                padding: 20px;
-                margin: 15px auto;
-                max-width: 600px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                border-radius: 10px;
+                padding: 8px 15px;
+                margin: 5px auto;
+                max-width: 700px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
                 backdrop-filter: blur(10px);
             }
             .admin-card-title {
                 font-weight: bold;
-                font-size: 1.2em;
-                margin-bottom: 15px;
+                font-size: 0.9em;
+                margin-bottom: 8px;
                 color: #333;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 8px;
+                gap: 5px;
             }
             .btn-group-custom {
                 display: flex;
                 flex-wrap: wrap;
                 justify-content: center;
-                gap: 10px;
-                margin: 10px 0;
+                gap: 5px;
+                margin: 5px 0;
             }
             .btn-custom {
-                min-width: 85px;
-                padding: 12px 20px;
-                font-size: 1.1em;
+                min-width: 60px;
+                padding: 6px 12px;
+                font-size: 0.85em;
                 font-weight: 600;
-                border-radius: 8px;
-                transition: all 0.3s ease;
+                border-radius: 6px;
+                transition: all 0.2s ease;
                 border: 2px solid currentColor;
             }
             .btn-custom:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             }
             .reset-group {
                 display: flex;
-                gap: 10px;
+                gap: 8px;
                 align-items: center;
                 justify-content: center;
             }
             #minReset {
-                font-size: 1.5em;
+                font-size: 1.1em;
                 text-align: center;
-                max-width: 120px;
-                border-radius: 8px;
+                max-width: 80px;
+                border-radius: 6px;
                 border: 2px solid #17a2b8;
-                padding: 10px;
+                padding: 6px 10px;
             }
             #btnReset {
-                font-size: 1.3em;
-                padding: 10px 30px;
-                border-radius: 8px;
+                font-size: 1em;
+                padding: 6px 20px;
+                border-radius: 6px;
                 font-weight: bold;
             }
             .key-section {
-                margin-top: 15px;
-                padding-top: 15px;
-                border-top: 2px dashed rgba(0,0,0,0.1);
+                margin-top: 8px;
+                padding-top: 8px;
+                border-top: 1px dashed rgba(0,0,0,0.1);
             }
             #keyPanel {
-                margin-top: 10px;
-                padding: 10px;
+                margin-top: 6px;
+                padding: 6px;
                 background: #e7f5ff;
-                border-radius: 8px;
+                border-radius: 6px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 8px;
+                gap: 6px;
+                font-size: 0.85em;
             }
             .admin-badge {
                 display: inline-block;
@@ -333,6 +339,9 @@
                 right: 10px;
                 z-index: 1000;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            }
+            .footer {
+                z-index: -1 !important;
             }
         </style>
     </head>
@@ -354,7 +363,7 @@
             </div>
         </div>
         
-        <div id="timer" style="font-size:23vw;margin-bottom: -.3ex;" >
+        <div id="timer" style="font-size:18vw;margin: 5px 0;" >
         -:--
         </div>  
         
@@ -370,7 +379,7 @@
                     <button class="btn btn-success btn-custom" onClick="plus(240)">+4 min</button>
                     <button class="btn btn-success btn-custom" onClick="plus(300)">+5 min</button>
                 </div>
-                <div class="admin-card-title" style="font-size: 1em; margin-top: 15px;">
+                <div class="admin-card-title" style="font-size: 0.85em; margin-top: 5px;">
                     <span>⏰</span> Add Time (Seconds)
                 </div>
                 <div class="btn-group-custom">
@@ -389,22 +398,22 @@
                     <span>🔐</span> Security Key
                 </div>
                 <div class="reset-group">
-                    <input id="inputKey" class="form-control" placeholder="Admin Key" style="max-width: 200px; border-radius: 8px;">    
-                    <button id="btnSetKey" class="btn btn-secondary btn-custom" onclick="setKey()">🔑 Set Key</button>
+                    <input id="inputKey" class="form-control" placeholder="Admin Key" style="max-width: 150px; border-radius: 6px; font-size: 0.9em; padding: 6px 10px;">    
+                    <button id="btnSetKey" class="btn btn-secondary btn-custom" onclick="setKey()">🔑 Set</button>
                 </div>
                 <div id="keyPanel" class="key-section" style="display: none;">
-                    <strong>Current Key:</strong> <span id="currentKey" style="font-family: monospace; background: #fff; padding: 5px 10px; border-radius: 5px;"></span>
+                    <strong style="font-size: 0.85em;">Key:</strong> <span id="currentKey" style="font-family: monospace; background: #fff; padding: 3px 8px; border-radius: 4px; font-size: 0.85em;"></span>
                 </div>
-                <div id="alertInfo" class="alert alert-info" style="font-size: medium; display:none; margin-top: 15px; border-radius: 8px;" role="alert">
+                <div id="alertInfo" class="alert alert-info" style="font-size: small; display:none; margin-top: 8px; border-radius: 6px; padding: 8px;" role="alert">
                 </div>
             </div>
         </div>
         
-        <div id="alertDisconnect" class="alert alert-danger" style="font-size: medium; display:none; position: fixed; top: 50px; left: 50%; transform: translateX(-50%); z-index: 999; min-width: 300px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" role="alert">
-            ⚠️ Disconnected from server: timer can be out of sync!
+        <div id="alertDisconnect" class="alert alert-danger" style="font-size: small; display:none; position: fixed; top: 30px; left: 50%; transform: translateX(-50%); z-index: 999; min-width: 250px; padding: 8px 12px; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" role="alert">
+            ⚠️ Disconnected from server
         </div>
-        <div id="alertConnect" class="alert alert-success" style="font-size: medium; display:none; position: fixed; top: 50px; left: 50%; transform: translateX(-50%); z-index: 999; min-width: 300px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);" role="alert">
-            ✅ Connected to server.
+        <div id="alertConnect" class="alert alert-success" style="font-size: small; display:none; position: fixed; top: 30px; left: 50%; transform: translateX(-50%); z-index: 999; min-width: 200px; padding: 8px 12px; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.3);" role="alert">
+            ✅ Connected
         </div>
 
 
@@ -418,8 +427,8 @@
         }
         document.getElementById("keyPanel").style.display = "none";
     </script>
-<span style="font-size: x-small; text-align: center; color:#aaa; position:fixed; width:100%; height: 2rem; left: 0; bottom: 0;">
-    Made with 🧡 by <a href="https://github.com/rafseggom">@rafseggom</a> | Fork from <a href="https://github.com/pafmon/shared-timer">@pafmon</a>
+<span class="footer" style="font-size: x-small; text-align: center; color:#aaa; position:fixed; width:100%; height: 2rem; left: 0; bottom: 0; z-index: -1; pointer-events: none;">
+    Made with 🧡 by <a href="https://github.com/rafseggom" style="pointer-events: all;">@rafseggom</a> | Fork from <a href="https://github.com/pafmon/shared-timer" style="pointer-events: all;">@pafmon</a>
 </span>
     
 </html>
