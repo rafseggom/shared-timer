@@ -119,8 +119,8 @@
             }
             
             var socket = io();
-            var t = 15;
-            var i = t;
+            var timeRemaining = 15;
+            var initialTime = timeRemaining;
             var key = "";
             var successToken = "";
             var targetTime = null;  // Timestamp-based timer
@@ -135,13 +135,13 @@
                 
                 // Calculate time from targetTime timestamp instead of decrementing
                 if (targetTime) {
-                    t = Math.max(0, Math.ceil((targetTime - Date.now()) / 1000));
+                    timeRemaining = Math.max(0, Math.ceil((targetTime - Date.now()) / 1000));
                 }
                 
-                var minutes = Math.floor(Math.abs(t)/60);
-                var seconds = Math.round((Math.abs(t) - minutes*60));
+                var minutes = Math.floor(Math.abs(timeRemaining)/60);
+                var seconds = Math.round((Math.abs(timeRemaining) - minutes*60));
 
-                var timeLeft = ((t<0)?"-":"")+
+                var timeLeft = ((timeRemaining<0)?"-":"")+
                     minutes+":"+
                     ((seconds<10)?"0"+seconds:seconds);
                 
@@ -151,7 +151,7 @@
                 
                 
                 
-                var progress = t/i*100;
+                var progress = timeRemaining/initialTime*100;
                 document.getElementById("prog").style["width"] = progress+"%";
                 
                 Piecon.setProgress(100 - progress);
@@ -164,7 +164,7 @@
                 var progressClassName = baseProgressClassName;
                 var pieconColor = '#1177ff';
 
-                if ( ( progress <= 20 ) && (progress>0) && t>0 ) {
+                if ( ( progress <= 20 ) && (progress>0) && timeRemaining>0 ) {
                     // <= 20% (1/5) Style - RED
                     window.document.title = timeLeft + " 😨";
                     fontColor = 'white';
@@ -172,7 +172,7 @@
                     progressClassName = baseProgressClassName + ' bg-danger';
                     pieconColor = '#ff1111';
 
-                } else if ( ( progress <= 33 ) && (progress>0) && t>0 ) {
+                } else if ( ( progress <= 33 ) && (progress>0) && timeRemaining>0 ) {
                     // <= 33% (1/3) Style - YELLOW
                     window.document.title = timeLeft + " 😰";
                     fontColor = 'black';
@@ -180,7 +180,7 @@
                     progressClassName = baseProgressClassName + ' bg-warning';
                     pieconColor = '#ffbb44';
 
-                } else if( t <= 0 ) {
+                } else if( timeRemaining <= 0 ) {
                     // Out of time! Style
                     window.document.title = timeLeft + " 😖";
                     fontColor = 'black';
@@ -206,8 +206,8 @@
 
             socket.on('reset', (msg) => {
                     console.log('Reset ' + msg.data);
-                    t = msg.data;
-                    i = t;
+                    timeRemaining = msg.data;
+                    initialTime = timeRemaining;
                     // Store targetTime for timestamp-based calculation
                     if (msg.targetTime) {
                         targetTime = msg.targetTime;
@@ -226,7 +226,7 @@
                     if (Math.abs(currentCalc - serverTime) > 2) {
                         console.log('Sync correction: ' + currentCalc + ' -> ' + serverTime);
                         targetTime = msg.targetTime;
-                        t = serverTime;
+                        timeRemaining = serverTime;
                     }
                 }
             });
