@@ -31,7 +31,7 @@
                                 
                                 if (data.valid) {
                                     currentProfessor = session.professor;
-                                    console.log("Sesión de profesor restaurada desde localStorage");
+                                    console.log("Professor session restored from localStorage");
                                     
                                     // Restore key if available
                                     if (session.key) {
@@ -45,7 +45,7 @@
                                 }
                             } else if (session.isAdmin) {
                                 // Regular admin session restored
-                                console.log("Sesión admin restaurada desde localStorage");
+                                console.log("Admin session restored from localStorage");
                                 
                                 // Restore key if available
                                 if (session.key) {
@@ -243,7 +243,7 @@
                 
                 // Add to local log (will be updated by server response)
                 const actor = currentProfessor ? currentProfessor.fullName : "Admin";
-                addToActivityLog(actor + " añadió " + (extra/60).toFixed(1) + " minutos");
+                addToActivityLog(actor + " added " + (extra/60).toFixed(1) + " minutes");
 
             }
 
@@ -270,7 +270,7 @@
                 
                 // Add to local log
                 const actor = currentProfessor ? currentProfessor.fullName : "Admin";
-                addToActivityLog(actor + " reinició el timer a " + minReset + " minutos");
+                addToActivityLog(actor + " reset timer to " + minReset + " minutes");
             }
 
             function setKey(){
@@ -290,9 +290,9 @@
                 // Add to local log
                 const actor = currentProfessor ? currentProfessor.fullName : "Admin";
                 if (newKey === "") {
-                    addToActivityLog(actor + " eliminó la clave de sesión");
+                    addToActivityLog(actor + " removed the session key");
                 } else {
-                    addToActivityLog(actor + " cambió la clave de sesión");
+                    addToActivityLog(actor + " changed the session key");
                 }
 
             }
@@ -308,7 +308,7 @@
 
             // Activity log management
             function addToActivityLog(message) {
-                const timestamp = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                 activityLog.unshift({ time: timestamp, message: message });
                 if (activityLog.length > 5) activityLog.pop(); // Keep only last 5
                 updateActivityLogDisplay();
@@ -335,7 +335,7 @@
                 const password = document.getElementById("profPassword").value;
                 
                 if (!password) {
-                    alert("Por favor, introduce la contraseña");
+                    alert("Please enter the password");
                     return;
                 }
                 
@@ -363,8 +363,8 @@
                         updateProfessorUI();
                         
                         // Show info message
-                        showInfo("Login exitoso como profesor " + data.fullName);
-                        addToActivityLog(data.fullName + " se ha conectado como profesor");
+                        showInfo("Logged in as professor " + data.fullName);
+                        addToActivityLog(data.fullName + " connected as professor");
                         
                         // Save to localStorage
                         localStorage.setItem('sharedTimerSession', JSON.stringify({
@@ -379,11 +379,11 @@
                             username: data.username
                         });
                     } else {
-                        alert("Contraseña incorrecta");
+                        alert("Incorrect password");
                     }
                 } catch (error) {
                     console.error("Error logging in:", error);
-                    alert("Error al verificar la contraseña");
+                    alert("Error verifying the password");
                 }
             }
 
@@ -396,9 +396,9 @@
                 localStorage.removeItem('sharedTimerSession');
                 
                 updateProfessorUI();
-                showInfo("Sesión de profesor cerrada");
+                showInfo("Professor session closed");
                 if (professorName) {
-                    addToActivityLog(professorName + " cerró sesión");
+                    addToActivityLog(professorName + " logged out");
                 }
                 
                 // Notify all clients
@@ -732,7 +732,7 @@
         <!-- Professor Control Banner (visible to all users) -->
         <div id="professorControlBanner" style="display: none; margin: 10px auto 5px; max-width: 700px; background: linear-gradient(135deg, #FFF4E6 0%, #FFE5B4 100%); border: 2px solid #FFD700; border-radius: 8px; padding: 10px 20px; box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3); font-weight: bold; color: #333; text-align: center;">
             <span style="font-size: 1.2em;">🎓</span>
-            <span>Timer controlado por <span id="professorControlName"></span></span>
+            <span>Timer controlled by <span id="professorControlName"></span></span>
         </div>
         
         <div class="adminControls" style="display: none;">
@@ -750,19 +750,19 @@
         <div class="adminControls" style="display: none;">
             <div class="admin-card">
                 <div class="admin-card-title">
-                    <span>🎓</span> Acceso Profesor
+                    <span>🎓</span> Professor Access
                 </div>
                 
                 <!-- Professor Badge (shown when logged in) -->
                 <div id="professorBadge" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 15px; border-radius: 8px; margin: 8px 0; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                    🔑 PROFESOR - <span id="professorName"></span>
+                    🔑 PROFESSOR - <span id="professorName"></span>
                     <button onclick="logoutProfesor()" style="margin-left: 10px; padding: 4px 12px; background: rgba(255,255,255,0.2); border: 1px solid white; border-radius: 4px; color: white; cursor: pointer; font-size: 0.85em;">Logout</button>
                 </div>
                 
                 <!-- Login Button (shown when not logged in) -->
                 <div id="professorLoginSection">
                     <button class="btn btn-primary btn-custom" onclick="openProfessorModal()" style="width: 100%; max-width: 250px; margin: 5px auto;">
-                        🎓 Login Profesor
+                        🎓 Professor Login
                     </button>
                 </div>
             </div>
@@ -824,18 +824,18 @@
         <!-- Professor Login Modal -->
         <div id="professorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center;">
             <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
-                <h3 style="margin-top: 0; color: #333; font-size: 1.5em;">🎓 Login Profesor</h3>
-                <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">Introduce la contraseña de profesor para obtener acceso completo</p>
+                <h3 style="margin-top: 0; color: #333; font-size: 1.5em;">🎓 Professor Login</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">Enter the professor password to get full access</p>
                 <input 
                     type="password" 
                     id="profPassword" 
-                    placeholder="Contraseña de profesor" 
+                    placeholder="Professor password" 
                     onkeyup="handleProfPasswordKey(event)"
                     style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 1em; margin-bottom: 15px; box-sizing: border-box;"
                 />
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button onclick="closeProfessorModal()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1em;">
-                        Cancelar
+                        Cancel
                     </button>
                     <button onclick="loginProfesor()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1em;">
                         Login
@@ -864,7 +864,7 @@
     
     <!-- Activity Log -->
     <div id="activityLog" style="display: none;">
-        <strong style="color: #333;">📋 Actividad</strong>
+        <strong style="color: #333;">📋 Activity</strong>
         <div id="activityLogContent"></div>
     </div>
     
