@@ -580,6 +580,11 @@
                 margin: 0;
                 padding: 0;
                 overflow: hidden;
+                min-height: 100vh;
+            }
+            body.admin-mode {
+                overflow-y: auto;
+                padding-bottom: 60px;
             }
             .admin-card {
                 background: rgba(255, 255, 255, 0.95);
@@ -587,8 +592,7 @@
                 padding: 8px 15px;
                 margin: 5px auto;
                 max-width: 700px;
-                max-height: 200px;
-                overflow-y: auto;
+                max-height: none;
                 box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
                 backdrop-filter: blur(10px);
             }
@@ -673,12 +677,22 @@
                 box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             }
             .footer {
-                z-index: -1 !important;
+                z-index: 10;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(5px);
+            }
+            .footer a {
+                color: #aaa;
+                text-decoration: none;
+            }
+            .footer a:hover {
+                color: #fff;
+                text-decoration: underline;
             }
             #activityLog {
                 position: fixed;
                 bottom: 10px;
-                right: 10px;
+                left: 10px;
                 max-width: 300px;
                 background: rgba(255, 255, 255, 0.95);
                 border-radius: 8px;
@@ -703,7 +717,8 @@
                 font-size: 0.9em;
             }
             .timer-admin {
-                font-size: 12vw !important;
+                font-size: 8vw !important;
+                margin: 10px 0 !important;
             }
         </style>
     </head>
@@ -745,9 +760,11 @@
                 </div>
                 
                 <!-- Login Button (shown when not logged in) -->
-                <button class="btn btn-primary btn-custom" onclick="openProfessorModal()" style="width: 100%; max-width: 250px; margin: 5px auto;">
-                    🎓 Login Profesor
-                </button>
+                <div id="professorLoginSection">
+                    <button class="btn btn-primary btn-custom" onclick="openProfessorModal()" style="width: 100%; max-width: 250px; margin: 5px auto;">
+                        🎓 Login Profesor
+                    </button>
+                </div>
             </div>
         </div>
         
@@ -831,6 +848,7 @@
     </body>
     <script>
         if (adminMode){
+            document.body.classList.add("admin-mode");
             document.getElementsByClassName("adminControls")[0].style.display = "block";
             document.getElementsByClassName("adminControls")[1].style.display = "block";
             document.getElementsByClassName("adminControls")[2].style.display = "block";
@@ -850,8 +868,8 @@
         <div id="activityLogContent"></div>
     </div>
     
-<span class="footer" style="font-size: x-small; text-align: center; color:#aaa; position:fixed; width:100%; height: 2rem; left: 0; bottom: 0; z-index: -1; pointer-events: none;">
-    Modified  by <a href="https://github.com/rafseggom/shared-timer" style="pointer-events: all;">@rafseggom</a> | Fork from <a href="https://github.com/pafmon/shared-timer" style="pointer-events: all;">@pafmon</a> | Made with ❤️ for <a href="https://www.informatica.us.es/" style="pointer-events: all;">ETSII</a>
+<span class="footer" style="font-size: x-small; text-align: center; color:#aaa; position:fixed; width:100%; height: 2rem; left: 0; bottom: 0;">
+    Modified  by <a href="https://github.com/rafseggom/shared-timer" target="_blank">@rafseggom</a> | Fork from <a href="https://github.com/pafmon/shared-timer" target="_blank">@pafmon</a> | Made with ❤️ for <a href="https://www.informatica.us.es/" target="_blank">ETSII</a>
 </span>
     
 </html>
