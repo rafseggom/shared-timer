@@ -11,11 +11,11 @@ Super simple (and **cloud ready**) shared timer using websockets (thanks to [soc
 - **Automatic reconnection** with session restoration
 
 ### Access Control
-- **Professor authentication** with absolute permissions
-- **Hierarchical permission system** (Professor > Master > Session > Admin)
-- **Professor blocking**: When a professor is active, all other users are blocked
+- **Named admin authentication** with absolute permissions
+- **Hierarchical permission system** (Named Admin > Master > Session > Admin)
+- **Admin blocking**: When a named admin is active, all other users are blocked
 - **Session persistence**: Logins survive page reloads via localStorage
-- **Multi-level keys**: Master key, session keys, and professor passwords
+- **Multi-level keys**: Master key, session keys, and admin passwords
 
 ### Visual Features
 - **Dynamic color coding**:
@@ -23,14 +23,14 @@ Super simple (and **cloud ready**) shared timer using websockets (thanks to [soc
   - Warning (≤33%): Yellow background
   - Critical (≤20%): Red background
 - **Activity log**: Real-time feed of timer modifications (bottom-right)
-- **Professor banner**: Visible indicator when a professor is in control
+- **Admin banner**: Visible indicator when a named admin is in control
 - **Progress bar** with visual indicators
 
 ### Admin Interface
 - **Quick time additions**: 1-5 minutes, 5-45 seconds
 - **Timer reset** with custom duration
 - **Key management**: Set/clear session keys
-- **Professor login** directly from admin panel
+- **Admin login** directly from admin panel
 
 ## Installation
 
@@ -56,14 +56,14 @@ PORT=5000
 # Master key (absolute access from environment variable)
 MASTERKEY=supersecret
 
-# Professor passwords
+# Named admin passwords
 # Format: username:password:Full Name,username2:password2:Full Name 2
-PROF_PASSWORDS=john:YourSecurePass1:John Doe,jane:AnotherSecurePass2:Jane Smith
+ADMINS=john:YourSecurePass1:John Doe,jane:AnotherSecurePass2:Jane Smith
 ```
 
-### Professor Passwords Format
+### Named Admin Passwords Format
 
-Configure your professors in the `PROF_PASSWORDS` environment variable using this format:
+Configure your named admins in the `ADMINS` environment variable using this format:
 
 ```
 username:password:Full Name,username2:password2:Full Name 2
@@ -71,11 +71,11 @@ username:password:Full Name,username2:password2:Full Name 2
 
 **Example:**
 ```
-PROF_PASSWORDS=john:YourSecurePass1:John Doe,jane:AnotherSecurePass2:Jane Smith
+ADMINS=john:YourSecurePass1:John Doe,jane:AnotherSecurePass2:Jane Smith
 ```
 
-- **username**: Identifier for the professor (not shown in UI)
-- **password**: Secret password only the professor knows
+- **username**: Identifier for the admin (not shown in UI)
+- **password**: Secret password only the admin knows
 - **Full Name**: Display name shown in banners and badges
 
 **Security Note**: Use strong passwords and keep them secret. Never commit the `.env` file to git.
@@ -106,7 +106,7 @@ If `$PORT` is not set, by default it launches a server on port 5000.
 - **Admin interface**: `http://localhost:5000/admin`
   - Requires password to access (default: `admin123`)
   - Provides controls to manage the timer
-  - Shows activity log and professor status
+  - Shows activity log and admin status
 
 ## Authentication & Permission System
 
@@ -115,7 +115,7 @@ The application implements a **hierarchical permission system** where higher-lev
 ### Permission Hierarchy (Highest to Lowest)
 
 ```
-1. Professor Password    ← ABSOLUTE CONTROL (blocks all others)
+1. Named Admin Password  ← ABSOLUTE CONTROL (blocks all others)
    ↓
 2. Master Key           ← Server administrator control
    ↓
@@ -124,7 +124,7 @@ The application implements a **hierarchical permission system** where higher-lev
 4. Admin Interface      ← View access only (admin123)
 ```
 
-### Professor Accounts (Level 1 - Highest Priority)
+### Named Admin Accounts (Level 1 - Highest Priority)
 
 **What it is:**
 - Special accounts with **absolute control** over the timer
@@ -138,15 +138,15 @@ The application implements a **hierarchical permission system** where higher-lev
 - **Persistent sessions**: Login survives page reloads (stored in browser)
 
 **How to use:**
-1. Go to `/admin` and log in with `admin123` (or use your professor password directly)
-2. Click "Login Profesor"
-3. Enter your professor password
-4. The UI shows: "PROFESOR - [Your Name]"
-5. All users see: "Timer controlado por Profesor [Your Name]"
+1. Go to `/admin` and log in with `admin123` (or use your admin password directly)
+2. Click "Admin Login"
+3. Enter your admin password
+4. The UI shows: "ADMIN - [Your Name]"
+5. All users see: "Timer controlled by [Your Name]"
 6. Control the timer freely—no keys needed!
 
 **Logout:**
-- Click the "Logout" button in your professor badge
+- Click the "Logout" button in your admin badge
 - Or close your browser (session clears)
 
 ### Master Key (Level 2)
@@ -158,7 +158,7 @@ The application implements a **hierarchical permission system** where higher-lev
 **What it does:**
 - Full control over timer
 - Can set/clear session keys
-- **Blocked if a professor is active**
+- **Blocked if a named admin is active**
 
 **How to use:**
 - Enter it in the "Security Key" field in `/admin`
@@ -173,7 +173,7 @@ The application implements a **hierarchical permission system** where higher-lev
 **What it does:**
 - Grants timer control to anyone who knows it
 - Can be changed by anyone with current session key or master key
-- **Blocked if a professor is active**
+- **Blocked if a named admin is active**
 
 **How to use:**
 1. In `/admin`, enter a new key in "Security Key" field
@@ -192,28 +192,28 @@ The application implements a **hierarchical permission system** where higher-lev
 
 **What it does:**
 - Grants access to `/admin` view
-- Does NOT grant timer control (you still need a key or professor login)
+- Does NOT grant timer control (you still need a key or admin login)
 
 **How to use:**
 - Navigate to `/admin`
 - Enter `admin123` when prompted
 
-### Professor Blocking Mechanism
+### Named Admin Blocking Mechanism
 
-When a professor logs in:
-- **All non-professor actions are blocked** on the server
+When a named admin logs in:
+- **All non-admin actions are blocked** on the server
 - Users with session keys **cannot** modify the timer
-- Users with master key **cannot** override (unless they also log in as professor)
-- **All connected users** see a banner indicating professor control
-- The professor can control the timer without any keys
+- Users with master key **cannot** override (unless they also log in as named admin)
+- **All connected users** see a banner indicating admin control
+- The named admin can control the timer without any keys
 
-This ensures **absolute professor authority** during active sessions.
+This ensures **absolute admin authority** during active sessions.
 
 ### Session Persistence
 
 The application remembers your login across page reloads:
 
-- **Professor logins** persist in browser localStorage
+- **Named admin logins** persist in browser localStorage
 - **Session keys** persist if you set them
 - **Reconnection**: If you lose connection, your session restores automatically
 - **Cleared on logout** or when you explicitly log out
@@ -225,16 +225,16 @@ The application remembers your login across page reloads:
 - Teacher sets a session key and shares it with students
 - Students use the key to control the timer during activities
 
-**Scenario 2: Professor authority**
-- Professor logs in with professor password
-- Professor has full control, students are blocked
-- Professor's name is visible to everyone
+**Scenario 2: Named admin authority**
+- Named admin logs in with their admin password
+- Named admin has full control, other users are blocked
+- Admin's name is visible to everyone
 - No keys needed
 
 **Scenario 3: Administrator override**
 - Admin uses master key to reset timer
 - Can clear rogue session keys
-- Cannot override an active professor session
+- Cannot override an active named admin session
 
 ## Technical Implementation
 
@@ -292,7 +292,7 @@ socket.on('reset', function(msg) {
 var targetTime = null; // Server's authoritative target timestamp
 
 socket.on('reset', function(msg) {
-    if (isAuthorized(msg.key, msg.professorPassword)) {
+    if (isAuthorized(msg.key, msg.adminPassword)) {
         targetTime = Date.now() + (msg.data * 1000);
         io.sockets.emit('reset', {
             targetTime: targetTime,
@@ -302,7 +302,7 @@ socket.on('reset', function(msg) {
 });
 
 socket.on('addTime', function(msg) {
-    if (isAuthorized(msg.key, msg.professorPassword)) {
+    if (isAuthorized(msg.key, msg.adminPassword)) {
         targetTime += (msg.data * 1000); // Add to existing timestamp
         io.sockets.emit('reset', {
             targetTime: targetTime,
@@ -326,8 +326,8 @@ socket.on('addTime', function(msg) {
 - `reset`: Set timer to specific duration
 - `addTime`: Add seconds to current timer
 - `setKey`: Change session key
-- `professorConnected`: Notify server of professor login
-- `professorDisconnected`: Notify server of professor logout
+- `adminConnected`: Notify server of named admin login
+- `adminDisconnected`: Notify server of named admin logout
 
 **Server → Client Events:**
 - `reset`: Update timer with new `targetTime` and remaining seconds
@@ -335,20 +335,20 @@ socket.on('addTime', function(msg) {
 - `keyChanged`: Session key was successfully changed
 - `keyCleared`: Session key was cleared
 - `keyUnchanged`: Key change was blocked
-- `currentProfessor`: A professor is now controlling the timer
-- `professorDisconnected`: Professor control ended
+- `currentAdmin`: A named admin is now controlling the timer
+- `adminDisconnected`: Named admin control ended
 
 ### Authorization Flow
 
 ```javascript
-function isAuthorized(key, professorPassword) {
-    // Priority 1: Professor password
-    if (professorPassword && getProfessorByPassword(professorPassword)) {
+function isAuthorized(key, adminPassword) {
+    // Priority 1: Admin password
+    if (adminPassword && getAdminByPassword(adminPassword)) {
         return true;
     }
     
-    // Block if professor is active
-    if (activeProfessor && !professorPassword) {
+    // Block if named admin is active
+    if (activeAdmin && !adminPassword) {
         return false;
     }
     
@@ -371,7 +371,7 @@ function isAuthorized(key, professorPassword) {
 **localStorage Schema:**
 ```javascript
 {
-    "professor": {
+    "admin": {
         "password": "encrypted_string",
         "username": "john",
         "fullName": "John Doe"
@@ -384,15 +384,15 @@ function isAuthorized(key, professorPassword) {
 
 **Restoration on page load:**
 1. Check localStorage for saved session
-2. If professor session exists, verify password with server (`/api/professor/verify`)
-3. If valid, restore `currentProfessor` object and emit `professorConnected`
+2. If named admin session exists, verify password with server (`/api/admin/verify`)
+3. If valid, restore `currentAdmin` object and emit `adminConnected`
 4. Restore session key if present
 5. Update UI accordingly
 
 **Reconnection handling:**
-- On `socket.on('connect')`, check if `currentProfessor` exists
-- If yes, re-emit `professorConnected` to restore server-side state
-- Server broadcasts professor status to all clients
+- On `socket.on('connect')`, check if `currentAdmin` exists
+- If yes, re-emit `adminConnected` to restore server-side state
+- Server broadcasts admin status to all clients
 
 ## Development
 
@@ -412,27 +412,27 @@ The original shared-timer by @pafmon provided:
 This fork adds significant improvements:
 
 **Authentication System:**
-- Professor accounts with absolute control
-- Active blocking when professors are controlling the timer
+- Named admin accounts with absolute control
+- Active blocking when named admins are controlling the timer
 - Session persistence across page reloads
 - Automatic session restoration on reconnect
 
 **Visual Enhancements:**
 - Real-time activity log
-- Professor control banner visible to all users
+- Admin control banner visible to all users
 - Improved color thresholds (33% warning, 20% critical)
 - Optimized admin layout with scrollable cards
 
 **User Experience:**
 - Smaller timer in admin view for better screen utilization
-- Professor status badges
+- Admin status badges
 - Clear visual hierarchy of controls
 - Mobile-responsive design improvements
 
 **Security:**
 - Environment-based credential management
 - Four-tier permission hierarchy
-- Server-side enforcement of professor privileges
+- Server-side enforcement of admin privileges
 - No credentials exposed to clients
 
 ## Credits

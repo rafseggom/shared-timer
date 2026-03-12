@@ -8,10 +8,10 @@
             
             // Admin password check
             var adminMode = (window.location.pathname == "/admin");
-            var currentProfessor = null;  // Store professor info {password, username, fullName}
+            var currentAdmin = null;  // Store named admin info {password, username, fullName}
             var activityLog = [];  // Store recent activity
             
-            // Check if password is admin123 or professor password
+            // Check if password is admin123 or a named admin password
             async function checkAdminPassword() {
                 if (adminMode) {
                     // Try to restore from localStorage first
@@ -21,17 +21,17 @@
                             const session = JSON.parse(savedSession);
                             
                             // Verify if it's still valid
-                            if (session.professor) {
-                                const response = await fetch('/api/professor/verify', {
+                            if (session.admin) {
+                                const response = await fetch('/api/admin/verify', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ password: session.professor.password })
+                                    body: JSON.stringify({ password: session.admin.password })
                                 });
                                 const data = await response.json();
                                 
                                 if (data.valid) {
-                                    currentProfessor = session.professor;
-                                    console.log("Professor session restored from localStorage");
+                                    currentAdmin = session.admin;
+                                    console.log("Admin session restored from localStorage");
                                     
                                     // Restore key if available
                                     if (session.key) {
@@ -71,9 +71,9 @@
                         return;
                     }
                     
-                    // First, try to verify if it's a professor password
+                    // First, try to verify if it's a named admin password
                     try {
-                        const response = await fetch('/api/professor/verify', {
+                        const response = await fetch('/api/admin/verify', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ password: pwd })
@@ -81,8 +81,8 @@
                         const data = await response.json();
                         
                         if (data.valid) {
-                            // It's a professor! Auto-login
-                            currentProfessor = {
+                            // It's a named admin! Auto-login
+                            currentAdmin = {
                                 password: pwd,
                                 username: data.username,
                                 fullName: data.fullName
@@ -90,16 +90,16 @@
                             
                             // Save to localStorage
                             localStorage.setItem('sharedTimerSession', JSON.stringify({
-                                professor: currentProfessor,
+                                admin: currentAdmin,
                                 timestamp: Date.now()
                             }));
                             return;
                         }
                     } catch (error) {
-                        console.error("Error verifying professor password:", error);
+                        console.error("Error verifying admin password:", error);
                     }
                     
-                    // Not a professor, check if it's admin123
+                    // Not a named admin, check if it's admin123
                     if (pwd !== "admin123") {
                         alert("Incorrect password!");
                         window.location.href = "/";
@@ -237,12 +237,12 @@
                 console.log("Adding time: +"+extra+" seconds");
                 socket.emit("addTime", {
                     key: key,
-                    professorPassword: currentProfessor?.password,
+                    adminPassword: currentAdmin?.password,
                     data: extra
                 });
                 
                 // Add to local log (will be updated by server response)
-                const actor = currentProfessor ? currentProfessor.fullName : "Admin";
+                const actor = currentAdmin ? currentAdmin.fullName : "Admin";
                 addToActivityLog(actor + " added " + (extra/60).toFixed(1) + " minutes");
 
             }
@@ -264,12 +264,12 @@
                 
                 socket.emit("reset", {
                     key: key,
-                    professorPassword: currentProfessor?.password,
+                    adminPassword: currentAdmin?.password,
                     data: tReset
                 });
                 
                 // Add to local log
-                const actor = currentProfessor ? currentProfessor.fullName : "Admin";
+                const actor = currentAdmin ? currentAdmin.fullName : "Admin";
                 addToActivityLog(actor + " reset timer to " + minReset + " minutes");
             }
 
@@ -282,13 +282,13 @@
 
                 socket.emit("setKey", {
                     key: key,
-                    professorPassword: currentProfessor?.password,
+                    adminPassword: currentAdmin?.password,
                     newKey: newKey,
                     successToken : successToken
                 });
                 
                 // Add to local log
-                const actor = currentProfessor ? currentProfessor.fullName : "Admin";
+                const actor = currentAdmin ? currentAdmin.fullName : "Admin";
                 if (newKey === "") {
                     addToActivityLog(actor + " removed the session key");
                 } else {
@@ -330,9 +330,9 @@
                 ).join('');
             }
 
-            // Professor login function
-            async function loginProfesor() {
-                const password = document.getElementById("profPassword").value;
+            // Admin login function
+            async function loginAdmin() {
+                const password = document.getElementById("adminPassword").value;
                 
                 if (!password) {
                     alert("Please enter the password");
@@ -340,7 +340,7 @@
                 }
                 
                 try {
-                    const response = await fetch('/api/professor/verify', {
+                    const response = await fetch('/api/admin/verify', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ password })
@@ -349,31 +349,31 @@
                     const data = await response.json();
                     
                     if (data.valid) {
-                        currentProfessor = {
+                        currentAdmin = {
                             password: password,
                             username: data.username,
                             fullName: data.fullName
                         };
                         
                         // Close modal
-                        document.getElementById("professorModal").style.display = "none";
-                        document.getElementById("profPassword").value = "";
+                        document.getElementById("adminModal").style.display = "none";
+                        document.getElementById("adminPassword").value = "";
                         
-                        // Update professor UI
-                        updateProfessorUI();
+                        // Update admin UI
+                        updateAdminUI();
                         
                         // Show info message
-                        showInfo("Logged in as professor " + data.fullName);
-                        addToActivityLog(data.fullName + " connected as professor");
+                        showInfo("Logged in as admin " + data.fullName);
+                        addToActivityLog(data.fullName + " connected as admin");
                         
                         // Save to localStorage
                         localStorage.setItem('sharedTimerSession', JSON.stringify({
-                            professor: currentProfessor,
+                            admin: currentAdmin,
                             timestamp: Date.now()
                         }));
                         
                         // Notify all clients (send password for backend verification)
-                        socket.emit("professorConnected", {
+                        socket.emit("adminConnected", {
                             password: password,
                             fullName: data.fullName,
                             username: data.username
@@ -387,46 +387,46 @@
                 }
             }
 
-            // Logout professor
-            function logoutProfesor() {
-                const professorName = currentProfessor?.fullName;
-                currentProfessor = null;
+            // Logout named admin
+            function logoutAdmin() {
+                const adminName = currentAdmin?.fullName;
+                currentAdmin = null;
                 
                 // Clear localStorage
                 localStorage.removeItem('sharedTimerSession');
                 
-                updateProfessorUI();
-                showInfo("Professor session closed");
-                if (professorName) {
-                    addToActivityLog(professorName + " logged out");
+                updateAdminUI();
+                showInfo("Admin session closed");
+                if (adminName) {
+                    addToActivityLog(adminName + " logged out");
                 }
                 
                 // Notify all clients
-                socket.emit("professorDisconnected");
+                socket.emit("adminDisconnected");
             }
 
-            // Update professor UI elements
-            function updateProfessorUI() {
-                if (currentProfessor) {
-                    // Hide login button, show badge with professor name
-                    if (document.getElementById("professorLoginSection")) {
-                        document.getElementById("professorLoginSection").style.display = "none";
+            // Update named admin UI elements
+            function updateAdminUI() {
+                if (currentAdmin) {
+                    // Hide login button, show badge with admin name
+                    if (document.getElementById("adminLoginSection")) {
+                        document.getElementById("adminLoginSection").style.display = "none";
                     }
-                    if (document.getElementById("professorBadge")) {
-                        document.getElementById("professorBadge").style.display = "block";
-                        document.getElementById("professorName").innerText = currentProfessor.fullName;
+                    if (document.getElementById("adminBadge")) {
+                        document.getElementById("adminBadge").style.display = "block";
+                        document.getElementById("adminName").innerText = currentAdmin.fullName;
                     }
-                    // Hide key panel (professor doesn't need it)
+                    // Hide key panel (named admin doesn't need it)
                     if (document.getElementById("keyPanel")) {
                         document.getElementById("keyPanel").style.display = "none";
                     }
                 } else {
                     // Show login button, hide badge
-                    if (document.getElementById("professorLoginSection")) {
-                        document.getElementById("professorLoginSection").style.display = "block";
+                    if (document.getElementById("adminLoginSection")) {
+                        document.getElementById("adminLoginSection").style.display = "block";
                     }
-                    if (document.getElementById("professorBadge")) {
-                        document.getElementById("professorBadge").style.display = "none";
+                    if (document.getElementById("adminBadge")) {
+                        document.getElementById("adminBadge").style.display = "none";
                     }
                     // Show key panel again
                     if (document.getElementById("keyPanel")) {
@@ -435,22 +435,22 @@
                 }
             }
 
-            // Open professor login modal
-            function openProfessorModal() {
-                document.getElementById("professorModal").style.display = "flex";
+            // Open admin login modal
+            function openAdminModal() {
+                document.getElementById("adminModal").style.display = "flex";
             }
 
-            // Close professor login modal
-            function closeProfessorModal() {
-                document.getElementById("professorModal").style.display = "none";
-                document.getElementById("profPassword").value = "";
+            // Close admin login modal
+            function closeAdminModal() {
+                document.getElementById("adminModal").style.display = "none";
+                document.getElementById("adminPassword").value = "";
             }
 
-            // Handle Enter key in professor password field
-            function handleProfPasswordKey(event) {
+            // Handle Enter key in admin password field
+            function handleAdminPasswordKey(event) {
                 if (event.keyCode === 13) {
                     event.preventDefault();
-                    loginProfesor();
+                    loginAdmin();
                 }
             }
 
@@ -530,14 +530,14 @@
                 document.getElementsByClassName("adminControls")[0].style["pointer-events"] = "auto";
                 document.getElementsByClassName("adminControls")[1].style["pointer-events"] = "auto";
 
-                // Restore professor session on reconnect
-                if (currentProfessor && currentProfessor.password) {
-                    socket.emit("professorConnected", {
-                        password: currentProfessor.password,
-                        fullName: currentProfessor.fullName,
-                        username: currentProfessor.username
+                // Restore named admin session on reconnect
+                if (currentAdmin && currentAdmin.password) {
+                    socket.emit("adminConnected", {
+                        password: currentAdmin.password,
+                        fullName: currentAdmin.fullName,
+                        username: currentAdmin.username
                     });
-                    updateProfessorUI();
+                    updateAdminUI();
                 }
 
                 setTimeout(function (){
@@ -552,11 +552,11 @@
                 
             });
 
-            // Listen for professor control events
-            socket.on('currentProfessor', function (data) {
-                // Show banner indicating which professor is controlling the timer
-                const banner = document.getElementById("professorControlBanner");
-                const bannerName = document.getElementById("professorControlName");
+            // Listen for admin control events
+            socket.on('currentAdmin', function (data) {
+                // Show banner indicating which admin is controlling the timer
+                const banner = document.getElementById("adminControlBanner");
+                const bannerName = document.getElementById("adminControlName");
                 
                 if (data && data.fullName) {
                     bannerName.innerText = data.fullName;
@@ -564,8 +564,8 @@
                 }
             });
             
-            socket.on('professorDisconnected', function () {
-                const banner = document.getElementById("professorControlBanner");
+            socket.on('adminDisconnected', function () {
+                const banner = document.getElementById("adminControlBanner");
                 if (banner) {
                     banner.style.display = "none";
                 }
@@ -729,10 +729,10 @@
             <div id="prog" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
         </div>
         
-        <!-- Professor Control Banner (visible to all users) -->
-        <div id="professorControlBanner" style="display: none; margin: 10px auto 5px; max-width: 700px; background: linear-gradient(135deg, #FFF4E6 0%, #FFE5B4 100%); border: 2px solid #FFD700; border-radius: 8px; padding: 10px 20px; box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3); font-weight: bold; color: #333; text-align: center;">
-            <span style="font-size: 1.2em;">🎓</span>
-            <span>Timer controlled by <span id="professorControlName"></span></span>
+        <!-- Admin Control Banner (visible to all users) -->
+        <div id="adminControlBanner" style="display: none; margin: 10px auto 5px; max-width: 700px; background: linear-gradient(135deg, #FFF4E6 0%, #FFE5B4 100%); border: 2px solid #FFD700; border-radius: 8px; padding: 10px 20px; box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3); font-weight: bold; color: #333; text-align: center;">
+            <span style="font-size: 1.2em;">🔑</span>
+            <span>Timer controlled by <span id="adminControlName"></span></span>
         </div>
         
         <div class="adminControls" style="display: none;">
@@ -750,19 +750,19 @@
         <div class="adminControls" style="display: none;">
             <div class="admin-card">
                 <div class="admin-card-title">
-                    <span>🎓</span> Professor Access
+                    <span>🔑</span> Admin Access
                 </div>
                 
-                <!-- Professor Badge (shown when logged in) -->
-                <div id="professorBadge" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 15px; border-radius: 8px; margin: 8px 0; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-                    🔑 PROFESSOR - <span id="professorName"></span>
-                    <button onclick="logoutProfesor()" style="margin-left: 10px; padding: 4px 12px; background: rgba(255,255,255,0.2); border: 1px solid white; border-radius: 4px; color: white; cursor: pointer; font-size: 0.85em;">Logout</button>
+                <!-- Admin Badge (shown when logged in) -->
+                <div id="adminBadge" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 15px; border-radius: 8px; margin: 8px 0; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+                    🔑 ADMIN - <span id="adminName"></span>
+                    <button onclick="logoutAdmin()" style="margin-left: 10px; padding: 4px 12px; background: rgba(255,255,255,0.2); border: 1px solid white; border-radius: 4px; color: white; cursor: pointer; font-size: 0.85em;">Logout</button>
                 </div>
                 
                 <!-- Login Button (shown when not logged in) -->
-                <div id="professorLoginSection">
-                    <button class="btn btn-primary btn-custom" onclick="openProfessorModal()" style="width: 100%; max-width: 250px; margin: 5px auto;">
-                        🎓 Professor Login
+                <div id="adminLoginSection">
+                    <button class="btn btn-primary btn-custom" onclick="openAdminModal()" style="width: 100%; max-width: 250px; margin: 5px auto;">
+                        🔑 Admin Login
                     </button>
                 </div>
             </div>
@@ -821,23 +821,23 @@
             ✅ Connected
         </div>
 
-        <!-- Professor Login Modal -->
-        <div id="professorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center;">
+        <!-- Admin Login Modal -->
+        <div id="adminModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center;">
             <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
-                <h3 style="margin-top: 0; color: #333; font-size: 1.5em;">🎓 Professor Login</h3>
-                <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">Enter the professor password to get full access</p>
+                <h3 style="margin-top: 0; color: #333; font-size: 1.5em;">🔑 Admin Login</h3>
+                <p style="color: #666; font-size: 0.9em; margin-bottom: 20px;">Enter the admin password to get full access</p>
                 <input 
                     type="password" 
-                    id="profPassword" 
-                    placeholder="Professor password" 
-                    onkeyup="handleProfPasswordKey(event)"
+                    id="adminPassword" 
+                    placeholder="Admin password" 
+                    onkeyup="handleAdminPasswordKey(event)"
                     style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 1em; margin-bottom: 15px; box-sizing: border-box;"
                 />
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button onclick="closeProfessorModal()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1em;">
+                    <button onclick="closeAdminModal()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1em;">
                         Cancel
                     </button>
-                    <button onclick="loginProfesor()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1em;">
+                    <button onclick="loginAdmin()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1em;">
                         Login
                     </button>
                 </div>

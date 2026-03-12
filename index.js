@@ -12,40 +12,40 @@ const io = new Server(http, {
 const port  = process.env.PORT || 5000;
 const masterKey  = process.env.MASTERKEY || "supersecret";
 var sessionKey  = "";
-var activeProfessor = null; // Track currently active professor
+var activeAdmin = null; // Track currently active named admin
 
-// Parse professor passwords from environment variable
-function parseProfessors() {
-  const profPasswordsEnv = process.env.PROF_PASSWORDS || "";
-  if (!profPasswordsEnv) return [];
+// Parse admin passwords from environment variable
+function parseAdmins() {
+  const adminsEnv = process.env.ADMINS || "";
+  if (!adminsEnv) return [];
   
-  return profPasswordsEnv.split(',').map(entry => {
+  return adminsEnv.split(',').map(entry => {
     const [username, password, fullName] = entry.split(':');
     return { username: username?.trim(), password: password?.trim(), fullName: fullName?.trim() };
   }).filter(p => p.username && p.password && p.fullName);
 }
 
-const professors = parseProfessors();
+const admins = parseAdmins();
 
 // Middleware to parse JSON bodies
 app.use(require('express').json());
 
-// Helper function to check if password belongs to a professor
-function getProfessorByPassword(password) {
+// Helper function to check if password belongs to a named admin
+function getAdminByPassword(password) {
     if (!password) return null;
-    return professors.find(p => p.password === password);
+    return admins.find(p => p.password === password);
 }
 
-// Helper function to check authorization (professor password > masterKey > sessionKey)
-function isAuthorized(key, professorPassword) {
-    // Priority 1: Professor password
-    if (professorPassword && getProfessorByPassword(professorPassword)) {
+// Helper function to check authorization (admin password > masterKey > sessionKey)
+function isAuthorized(key, adminPassword) {
+    // Priority 1: Admin password
+    if (adminPassword && getAdminByPassword(adminPassword)) {
         return true;
     }
     
-    // If there's an active professor, block non-professor actions
-    if (activeProfessor && !professorPassword) {
-        console.log("Action blocked: Active professor session exists");
+    // If there's an active named admin, block non-admin actions
+    if (activeAdmin && !adminPassword) {
+        console.log("Action blocked: Active admin session exists");
         return false;
     }
     
@@ -70,22 +70,22 @@ app.get('/piecon.js', (req, res) => {
     res.sendFile(__dirname + '/piecon.min.js');
 });
 
-// API endpoint to verify professor password
-app.post('/api/professor/verify', (req, res) => {
+// API endpoint to verify admin password
+app.post('/api/admin/verify', (req, res) => {
     const { password } = req.body;
     
     if (!password) {
         return res.json({ valid: false });
     }
     
-    const professor = professors.find(p => p.password === password);
+    const admin = admins.find(p => p.password === password);
     
-    if (professor) {
-        console.log("Professor login: <" + professor.fullName + ">");
+    if (admin) {
+        console.log("Admin login: <" + admin.fullName + ">");
         return res.json({ 
             valid: true, 
-            username: professor.username,
-            fullName: professor.fullName 
+            username: admin.username,
+            fullName: admin.fullName 
         });
     }
     
@@ -124,11 +124,11 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log("User desconnected. Current Number: "+socket.client.conn.server.clientsCount);
         
-        // If the disconnected socket was a professor, clear the session
-        if (activeProfessor && activeProfessor.socketId === socket.id) {
-            console.log("Professor session ended (disconnected): <" + activeProfessor.fullName + ">");
-            activeProfessor = null;
-            io.sockets.emit("professorDisconnected");
+        // If the disconnected socket was a named admin, clear the session
+        if (activeAdmin && activeAdmin.socketId === socket.id) {
+            console.log("Admin session ended (disconnected): <" + activeAdmin.fullName + ">");
+            activeAdmin = null;
+            io.sockets.emit("adminDisconnected");
         }
         
         if(socket.client.conn.server.clientsCount == 0){
@@ -149,11 +149,11 @@ io.on('connection', (socket) => {
             return;
         }
         
-        console.log("Session Key Change Request: <"+ sessionKey+ "> -> <"+msg.newKey + "> with key <"+msg.key+"> or professor password");
+        console.log("Session Key Change Request: <"+ sessionKey+ "> -> <"+msg.newKey + "> with key <"+msg.key+"> or admin password");
 
-        const professor = getProfessorByPassword(msg.professorPassword);
+        const admin = getAdminByPassword(msg.adminPassword);
         
-        if(msg.newKey == sessionKey || msg.key == sessionKey || sessionKey == "" || professor) {
+        if(msg.newKey == sessionKey || msg.key == sessionKey || sessionKey == "" || admin) {
             sessionKey = msg.newKey;
             if (sessionKey != "")
                 io.sockets.emit("keyChanged", {
@@ -174,10 +174,10 @@ io.on('connection', (socket) => {
 
     socket.on('reset', (msg) => {
         const oldRemaining = getTimeRemaining();
-        const professor = getProfessorByPassword(msg.professorPassword);
-        console.log("Reset Request: "+oldRemaining+ "-> "+msg.data + " with key <"+msg.key+">" + (professor ? " by professor <" + professor.fullName + ">" : ""));
+        const admin = getAdminByPassword(msg.adminPassword);
+        console.log("Reset Request: "+oldRemaining+ "-> "+msg.data + " with key <"+msg.key+">" + (admin ? " by admin <" + admin.fullName + ">" : ""));
 
-        if(isAuthorized(msg.key, msg.professorPassword)) {
+        if(isAuthorized(msg.key, msg.adminPassword)) {
             targetTime = Date.now() + (msg.data * 1000);
             io.sockets.emit("reset", {
                 data: msg.data,
@@ -185,11 +185,11 @@ io.on('connection', (socket) => {
                 timeRemaining: msg.data
             });
             
-            // Emit professor info to all clients if action was by professor
-            if (professor) {
-                io.sockets.emit("currentProfessor", {
-                    fullName: professor.fullName,
-                    username: professor.username
+            // Emit admin info to all clients if action was by named admin
+            if (admin) {
+                io.sockets.emit("currentAdmin", {
+                    fullName: admin.fullName,
+                    username: admin.username
                 });
             }
         } else {
@@ -199,10 +199,10 @@ io.on('connection', (socket) => {
 
     socket.on('addTime', (msg) => {
         const oldRemaining = getTimeRemaining();
-        const professor = getProfessorByPassword(msg.professorPassword);
-        console.log("AddTime Request: +"+msg.data + " with key <"+msg.key+">" + (professor ? " by professor <" + professor.fullName + ">" : ""));
+        const admin = getAdminByPassword(msg.adminPassword);
+        console.log("AddTime Request: +"+msg.data + " with key <"+msg.key+">" + (admin ? " by admin <" + admin.fullName + ">" : ""));
 
-        if(isAuthorized(msg.key, msg.professorPassword)) {
+        if(isAuthorized(msg.key, msg.adminPassword)) {
             if (targetTime && targetTime > Date.now()) {
                 targetTime += (msg.data * 1000);
             } else {
@@ -215,11 +215,11 @@ io.on('connection', (socket) => {
                 timeRemaining: newRemaining
             });
             
-            // Emit professor info to all clients if action was by professor
-            if (professor) {
-                io.sockets.emit("currentProfessor", {
-                    fullName: professor.fullName,
-                    username: professor.username
+            // Emit admin info to all clients if action was by named admin
+            if (admin) {
+                io.sockets.emit("currentAdmin", {
+                    fullName: admin.fullName,
+                    username: admin.username
                 });
             }
         } else {
@@ -235,41 +235,41 @@ io.on('connection', (socket) => {
             timeRemaining: remaining
         });
         
-        // If there's an active professor, notify the newly connected client
-        if (activeProfessor) {
-            socket.emit("currentProfessor", {
-                fullName: activeProfessor.fullName,
-                username: activeProfessor.username
+        // If there's an active named admin, notify the newly connected client
+        if (activeAdmin) {
+            socket.emit("currentAdmin", {
+                fullName: activeAdmin.fullName,
+                username: activeAdmin.username
             });
         }
     });
     
-    // Professor session management
-    socket.on('professorConnected', (data) => {
-        const professor = getProfessorByPassword(data.password);
-        if (professor) {
-            activeProfessor = {
-                fullName: professor.fullName,
-                username: professor.username,
+    // Named admin session management
+    socket.on('adminConnected', (data) => {
+        const admin = getAdminByPassword(data.password);
+        if (admin) {
+            activeAdmin = {
+                fullName: admin.fullName,
+                username: admin.username,
                 socketId: socket.id
             };
-            console.log("Professor session started: <" + professor.fullName + ">");
+            console.log("Admin session started: <" + admin.fullName + ">");
             
             // Broadcast to ALL clients
-            io.sockets.emit("currentProfessor", {
-                fullName: professor.fullName,
-                username: professor.username
+            io.sockets.emit("currentAdmin", {
+                fullName: admin.fullName,
+                username: admin.username
             });
         }
     });
     
-    socket.on('professorDisconnected', () => {
-        if (activeProfessor && activeProfessor.socketId === socket.id) {
-            console.log("Professor session ended: <" + activeProfessor.fullName + ">");
-            activeProfessor = null;
+    socket.on('adminDisconnected', () => {
+        if (activeAdmin && activeAdmin.socketId === socket.id) {
+            console.log("Admin session ended: <" + activeAdmin.fullName + ">");
+            activeAdmin = null;
             
             // Broadcast to ALL clients
-            io.sockets.emit("professorDisconnected");
+            io.sockets.emit("adminDisconnected");
         }
     });
 });
